@@ -10,368 +10,554 @@ servers:
       default: api.example.com
     port:
       default: '80'
+      
 components:
+
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Provide the access token obtained from the Auth endpoint.
+        Example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+  parameters:
+
+    OnboardIdParam:
+      name: onboard_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique onboarding identifier for the device/company.
+
+    TaskIdParam:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Background task identifier returned from async operations.
+
+    InvoiceIdParam:
+      name: invoice_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique invoice identifier.
+
+    StartDateQuery:
+      name: start_date
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+      description: Start date filter (YYYY-MM-DD).
+
+    EndDateQuery:
+      name: end_date
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+      description: End date filter (YYYY-MM-DD).
+
+    CustomerVatQuery:
+      name: customer_vat
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Filter results by customer VAT number.
+
+  schemas:
+
+    # =========================
+    # AUTH
+    # =========================
+
+    AuthRequest:
+      type: object
+      required:
+        - vat_number
+        - username
+        - secret
+      properties:
+        vat_number:
+          type: string
+          example: "311262046600003"
+          description: VAT number of the registered entity.
+        username:
+          type: string
+          example: "api"
+          description: API username.
+        secret:
+          type: string
+          example: "W3lc0m32eg$@p!"
+          description: API secret key.
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Bearer access token.
+        expires_in:
+          type: integer
+          description: Token validity duration in seconds.
+
+    # =========================
+    # ADDRESS
+    # =========================
+
+    Address:
+      type: object
+      properties:
+        street_name:
+          type: string
+        building_number:
+          type: string
+        city:
+          type: string
+        postal_code:
+          type: string
+        country:
+          type: string
+          example: "SA"
+      description: Standard postal address structure.
+
+    # =========================
+    # SUPPLIER
+    # =========================
+
+    SupplierInfo:
+      type: object
+      required:
+        - vat_number
+        - registration_name
+      properties:
+        vat_number:
+          type: string
+          description: Supplier VAT registration number.
+        registration_name:
+          type: string
+          description: Legal registered company name.
+        address:
+          $ref: "#/components/schemas/Address"
+
+    # =========================
+    # CUSTOMER
+    # =========================
+
+    CustomerInfo:
+      type: object
+      properties:
+        vat_number:
+          type: string
+          description: Customer VAT number.
+        registration_name:
+          type: string
+          description: Customer legal name.
+        address:
+          $ref: "#/components/schemas/Address"
+
+    # =========================
+    # TAX STRUCTURE
+    # =========================
+
+    TaxSubtotal:
+      type: object
+      properties:
+        taxable_amount:
+          type: number
+          format: float
+          description: Taxable base amount.
+        tax_amount:
+          type: number
+          format: float
+          description: Calculated tax amount.
+        percent:
+          type: number
+          format: float
+          description: Tax percentage applied.
+
+    TaxTotal:
+      type: object
+      properties:
+        tax_amount:
+          type: number
+          format: float
+        tax_subtotals:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaxSubtotal"
+
+    # =========================
+    # ALLOWANCE / CHARGE
+    # =========================
+
+    AllowanceCharge:
+      type: object
+      properties:
+        charge_indicator:
+          type: boolean
+          description: >
+            true = charge
+            false = allowance (discount)
+        amount:
+          type: number
+          format: float
+        reason:
+          type: string
+      x-note: >
+        Used for discounts or additional charges per invoice or per line.
+
+    # =========================
+    # INVOICE LINE
+    # =========================
+
+    InvoiceLine:
+      type: object
+      required:
+        - id
+        - quantity
+        - price_per_unit
+      properties:
+        id:
+          type: string
+        quantity:
+          type: number
+          format: float
+        price_per_unit:
+          type: number
+          format: float
+          description: Base amount minus discount amount.
+        allowance_charges:
+          type: array
+          items:
+            $ref: "#/components/schemas/AllowanceCharge"
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+
+    # =========================
+    # LEGAL TOTALS
+    # =========================
+
+    LegalMonetaryTotal:
+      type: object
+      properties:
+        line_extension_amount:
+          type: number
+          format: float
+        tax_exclusive_amount:
+          type: number
+          format: float
+        tax_inclusive_amount:
+          type: number
+          format: float
+        payable_amount:
+          type: number
+          format: float
+
+    # =========================
+    # INVOICE REQUEST
+    # =========================
+
+    InvoiceRequest:
+      type: object
+      required:
+        - invoice_number
+        - issue_date
+        - supplier
+        - customer
+        - invoice_lines
+      properties:
+        invoice_number:
+          type: string
+        issue_date:
+          type: string
+          format: date
+        invoice_type:
+          type: string
+          description: >
+            Can be standard, simplified, advance_payment, etc.
+        supplier:
+          $ref: "#/components/schemas/SupplierInfo"
+        customer:
+          $ref: "#/components/schemas/CustomerInfo"
+        invoice_lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+        legal_monetary_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+
+    # =========================
+    # CREDIT NOTE REQUEST
+    # =========================
+
+    CreditNoteRequest:
+      allOf:
+        - $ref: "#/components/schemas/InvoiceRequest"
+      description: Credit note structure mirrors invoice structure.
+
+    # =========================
+    # DEBIT NOTE REQUEST
+    # =========================
+
+    DebitNoteRequest:
+      allOf:
+        - $ref: "#/components/schemas/InvoiceRequest"
+      description: Debit note structure mirrors invoice structure.
+
+    # =========================
+    # NOTIFICATION CONFIG
+    # =========================
+
+    NotificationConfig:
+      type: object
+      properties:
+        callback_url:
+          type: string
+          format: uri
+          description: Webhook URL for status notifications.
+        active:
+          type: boolean
+
+    # =========================
+    # TASK RESPONSE
+    # =========================
+
+    TaskResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
 paths:
+
+  # =========================
+  # AUTH
+  # =========================
+
   /v1/e-invoicing/auth:
     post:
-      summary: Auth
-      responses:
-        '200':
-          description: Successful response
+      tags: [Authentication]
+      summary: Generate Access Token
+      description: Authenticate using VAT number and API credentials.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Token generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  # =========================
+  # ONBOARDING
+  # =========================
+
   /v1/e-invoicing/onboardings:
     post:
-      summary: Onboard Both
-      responses:
-        '200':
-          description: Successful response
+      tags: [Onboarding]
+      summary: Onboard Device / Company
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-      security:
-      - BearerAuth: []
-    get:
-      summary: List Onboardings
+              description: Onboarding payload from Postman collection.
       responses:
-        '200':
-          description: Successful response
+        "200":
+          description: Onboarding successful
+
+    get:
+      tags: [Onboarding]
+      summary: List Onboardings
       security:
-      - BearerAuth: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: List of onboarded devices
+
+  # =========================
+  # INVOICES
+  # =========================
+
   /v1/e-invoicing/{onboard_id}/invoices:
     post:
-      summary: Advance Payment
-      responses:
-        '200':
-          description: Successful response
+      tags: [Invoices]
+      summary: Create / Report Invoice
+      security:
+        - BearerAuth: []
       parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: "#/components/parameters/OnboardIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-      security:
-      - BearerAuth: []
-    get:
-      summary: List Invoices By Filter
+              $ref: "#/components/schemas/InvoiceRequest"
       responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: start_date
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: end_date
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: customer_vat
-        in: query
-        required: false
-        schema:
-          type: string
+        "200":
+          description: Invoice processed successfully
+
+    get:
+      tags: [Invoices]
+      summary: List Invoices by Filter
       security:
-      - BearerAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardIdParam"
+        - $ref: "#/components/parameters/StartDateQuery"
+        - $ref: "#/components/parameters/EndDateQuery"
+        - $ref: "#/components/parameters/CustomerVatQuery"
+      responses:
+        "200":
+          description: Filtered invoice list
+
+  # =========================
+  # CREDIT NOTES
+  # =========================
+
   /v1/e-invoicing/{onboard_id}/credit-notes:
     post:
-      summary: Report Credit Note Copy
-      responses:
-        '200':
-          description: Successful response
+      tags: [Credit Notes]
+      summary: Create / Report Credit Note
+      security:
+        - BearerAuth: []
       parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: "#/components/parameters/OnboardIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-      security:
-      - BearerAuth: []
-    get:
-      summary: List All CreditNotes
+              $ref: "#/components/schemas/CreditNoteRequest"
       responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
+        "200":
+          description: Credit note processed
+
+    get:
+      tags: [Credit Notes]
+      summary: List Credit Notes
       security:
-      - BearerAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardIdParam"
+      responses:
+        "200":
+          description: Credit note list
+
+  # =========================
+  # DEBIT NOTES
+  # =========================
+
   /v1/e-invoicing/{onboard_id}/debit-notes:
     post:
-      summary: Report Debit Note
-      responses:
-        '200':
-          description: Successful response
+      tags: [Debit Notes]
+      summary: Create / Report Debit Note
+      security:
+        - BearerAuth: []
       parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: "#/components/parameters/OnboardIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-      security:
-      - BearerAuth: []
-    get:
-      summary: List All DebitNotes
+              $ref: "#/components/schemas/DebitNoteRequest"
       responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
+        "200":
+          description: Debit note processed
+
+    get:
+      tags: [Debit Notes]
+      summary: List Debit Notes
       security:
-      - BearerAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardIdParam"
+      responses:
+        "200":
+          description: Debit note list
+
+  # =========================
+  # NOTIFICATION CONFIG
+  # =========================
+
   /v1/e-invoicing/{onboard_id}/notify-config:
     post:
-      summary: Notify Config
-      responses:
-        '200':
-          description: Successful response
+      tags: [Notifications]
+      summary: Configure Webhook Notification
+      security:
+        - BearerAuth: []
       parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
+        - $ref: "#/components/parameters/OnboardIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-      security:
-      - BearerAuth: []
+              $ref: "#/components/schemas/NotificationConfig"
+      responses:
+        "200":
+          description: Notification configuration updated
+
+  # =========================
+  # EXCEL GENERATION
+  # =========================
+
   /v1/e-invoicing/{onboard_id}/docs-xls:
     post:
-      summary: Generate Excel File
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: start_date
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: end_date
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: customer_vat
-        in: query
-        required: false
-        schema:
-          type: string
+      tags: [Reports]
+      summary: Generate Excel Report
       security:
-      - BearerAuth: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardIdParam"
+        - $ref: "#/components/parameters/StartDateQuery"
+        - $ref: "#/components/parameters/EndDateQuery"
+        - $ref: "#/components/parameters/CustomerVatQuery"
+      responses:
+        "200":
+          description: Excel generation started
+
+  # =========================
+  # TASK STATUS
+  # =========================
+
   /v1/e-invoicing/{onboard_id}/tasks/{task_id}:
     get:
-      summary: Get Task
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: task_id
-        in: path
-        required: true
-        schema:
-          type: string
+      tags: [Tasks]
+      summary: Get Task Status
       security:
-      - BearerAuth: []
-  /v1/e-invoicing/{onboard_id}/docs-xls/{file_id}:
-    get:
-      summary: Download Excel File
-      responses:
-        '200':
-          description: Successful response
+        - BearerAuth: []
       parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: file_id
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
-  /v1/e-invoicing/{onboard_id}/invoices/pdfs/{invoice_id}:
-    get:
-      summary: Get Invoice PDF
+        - $ref: "#/components/parameters/OnboardIdParam"
+        - $ref: "#/components/parameters/TaskIdParam"
       responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: invoice_id
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
-  /v1/e-invoicing/{onboard_id}/credit-notes/pdfs/{credit_note_id}:
-    get:
-      summary: Get Credit Note PDF
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: credit_note_id
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
-  /v1/e-invoicing/{onboard_id}/credit-notes/{credit_note_id}:
-    get:
-      summary: Get CreditNote XML
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: credit_note_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: format
-        in: query
-        required: false
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
-  /v1/e-invoicing/{onboard_id}/invoices/{invoice_id}:
-    get:
-      summary: Get Invoice
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: invoice_id
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
-  /v1/e-invoicing:
-    get:
-      summary: EGS-Info
-      responses:
-        '200':
-          description: Successful response
-  /v1/e-invoicing/{onboard_id}/credit-notes/{credit_note_number}:
-    get:
-      summary: Get CreditNote
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: credit_note_number
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
-  /v1/e-invoicing/{onboard_id}/invoices/{debit_note_id}:
-    get:
-      summary: Get DebitNote
-      responses:
-        '200':
-          description: Successful response
-      parameters:
-      - name: onboard_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: debit_note_id
-        in: path
-        required: true
-        schema:
-          type: string
-      security:
-      - BearerAuth: []
+        "200":
+          description: Task status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
