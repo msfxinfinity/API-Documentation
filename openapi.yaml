@@ -320,19 +320,112 @@ components:
     # =========================
 
     CreditNoteRequest:
-      allOf:
-        - $ref: "#/components/schemas/InvoiceRequest"
-      description: Credit note structure mirrors invoice structure.
-
+      type: object
+      required:
+        - creditnote_number
+        - issue_date
+        - supplier
+        - customer
+        - invoice_lines
+      properties:
+    
+        creditnote_number:
+          type: string
+          description: Unique credit note reference number.
+          example: "CN-2025-0001"
+    
+        billing_reference:
+          type: string
+          description: Reference to the original invoice being adjusted.
+          example: "INV-2025-0001"
+    
+        issue_date:
+          type: string
+          format: date
+          description: Credit note issue date (YYYY-MM-DD).
+          example: "2025-12-02"
+    
+        creditnote_type:
+          type: string
+          description: >
+            Type of credit note.
+            - standard
+            - simplified
+          example: "standard"
+    
+        supplier:
+          $ref: "#/components/schemas/SupplierInfo"
+    
+        customer:
+          $ref: "#/components/schemas/CustomerInfo"
+    
+        invoice_lines:
+          type: array
+          description: Line items being credited.
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+    
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+    
+        legal_monetary_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+          
     # =========================
     # DEBIT NOTE REQUEST
     # =========================
 
     DebitNoteRequest:
-      allOf:
-        - $ref: "#/components/schemas/InvoiceRequest"
-      description: Debit note structure mirrors invoice structure.
-
+      type: object
+      required:
+        - debitnote_number
+        - issue_date
+        - supplier
+        - customer
+        - invoice_lines
+      properties:
+    
+        debitnote_number:
+          type: string
+          description: Unique debit note reference number.
+          example: "DN-2025-0001"
+    
+        billing_reference:
+          type: string
+          description: Reference to the original invoice being adjusted.
+          example: "INV-2025-0001"
+    
+        issue_date:
+          type: string
+          format: date
+          description: Debit note issue date (YYYY-MM-DD).
+          example: "2025-12-03"
+    
+        debitnote_type:
+          type: string
+          description: >
+            Type of debit note.
+            - standard
+            - simplified
+          example: "standard"
+    
+        supplier:
+          $ref: "#/components/schemas/SupplierInfo"
+    
+        customer:
+          $ref: "#/components/schemas/CustomerInfo"
+    
+        invoice_lines:
+          type: array
+          description: Line items being debited.
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+    
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+    
+        legal_monetary_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
     # =========================
     # NOTIFICATION CONFIG
     # =========================
@@ -587,32 +680,144 @@ paths:
 
   /v1/e-invoicing/{onboard_id}/credit-notes:
     post:
-      tags: [Credit Notes]
+      tags:
+        - Credit Notes
       summary: Create / Report Credit Note
+      description: >
+        Submits a credit note for invoice adjustment.
+        
+        Used when:
+        - Invoice cancellation
+        - Partial refund
+        - Overcharge correction
+        
+        Must reference the original invoice via billing_reference.
+  
       security:
         - BearerAuth: []
+  
       parameters:
         - $ref: "#/components/parameters/OnboardIdParam"
+  
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/CreditNoteRequest"
+            examples:
+  
+              StandardCreditNote:
+                summary: Standard Credit Note Example
+                value:
+                  creditnote_number: "CN-2025-0001"
+                  billing_reference: "INV-2025-0001"
+                  issue_date: "2025-12-02"
+                  creditnote_type: "standard"
+                  supplier:
+                    vat_number: "311262046600003"
+                    registration_name: "GoAgile Technologies"
+                  customer:
+                    vat_number: "311262046600003"
+                    registration_name: "Client Company"
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      price_per_unit: 375.65
+                  legal_monetary_total:
+                    payable_amount: 375.65
+  
       responses:
+  
         "200":
-          description: Credit note processed
-
+          description: Credit note processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  creditnote_id:
+                    type: string
+                    example: "cn_abc123"
+                  zatca_status:
+                    type: string
+                    example: "CLEARED"
+  
+        "400":
+          description: Invalid request payload
+  
+        "401":
+          description: Unauthorized – Invalid or missing token
+  
+        "422":
+          description: Validation error from ZATCA
+  
+        "500":
+          description: Internal server error
+    
     get:
-      tags: [Credit Notes]
+      tags:
+        - Credit Notes
       summary: List Credit Notes
+      description: >
+        Retrieve all credit notes associated with the given onboard_id.
+        
+        Can be used to:
+        - Check adjustment history
+        - Validate invoice corrections
+        - Track credit note processing status
+  
       security:
         - BearerAuth: []
+  
       parameters:
         - $ref: "#/components/parameters/OnboardIdParam"
+  
       responses:
         "200":
-          description: Credit note list
+          description: List of credit notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                    example: 2
+                  credit_notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        creditnote_id:
+                          type: string
+                          example: "cn_abc123"
+                        creditnote_number:
+                          type: string
+                          example: "CN-2025-0001"
+                        billing_reference:
+                          type: string
+                          example: "INV-2025-0001"
+                        issue_date:
+                          type: string
+                          format: date
+                          example: "2025-12-02"
+                        status:
+                          type: string
+                          example: "CLEARED"
+                        payable_amount:
+                          type: number
+                          format: float
+                          example: 375.65
+  
+        "401":
+          description: Unauthorized – Invalid or missing token
+  
+        "500":
+          description: Internal server error
 
   # =========================
   # DEBIT NOTES
@@ -620,32 +825,144 @@ paths:
 
   /v1/e-invoicing/{onboard_id}/debit-notes:
     post:
-      tags: [Debit Notes]
+      tags:
+        - Debit Notes
       summary: Create / Report Debit Note
+      description: >
+        Submits a debit note for invoice adjustment.
+        
+        Used when:
+        - Additional charge is required
+        - Underbilling correction
+        - Post-issuance price increase
+  
+        Must reference the original invoice via billing_reference.
+  
       security:
         - BearerAuth: []
+  
       parameters:
         - $ref: "#/components/parameters/OnboardIdParam"
+  
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/DebitNoteRequest"
+            examples:
+  
+              StandardDebitNote:
+                summary: Standard Debit Note Example
+                value:
+                  debitnote_number: "DN-2025-0001"
+                  billing_reference: "INV-2025-0001"
+                  issue_date: "2025-12-03"
+                  debitnote_type: "standard"
+                  supplier:
+                    vat_number: "311262046600003"
+                    registration_name: "GoAgile Technologies"
+                  customer:
+                    vat_number: "311262046600003"
+                    registration_name: "Client Company"
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      price_per_unit: 100.00
+                  legal_monetary_total:
+                    payable_amount: 100.00
+  
       responses:
+  
         "200":
-          description: Debit note processed
+          description: Debit note processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  debitnote_id:
+                    type: string
+                    example: "dn_abc123"
+                  zatca_status:
+                    type: string
+                    example: "CLEARED"
+  
+        "400":
+          description: Invalid request payload
+  
+        "401":
+          description: Unauthorized – Invalid or missing token
+  
+        "422":
+          description: Validation error from ZATCA
+  
+        "500":
+          description: Internal server error
 
     get:
-      tags: [Debit Notes]
+      tags:
+        - Debit Notes
       summary: List Debit Notes
+      description: >
+        Retrieve all debit notes associated with the given onboard_id.
+        
+        Used to:
+        - Track additional charges
+        - Validate adjustments
+        - Monitor ZATCA processing status
+  
       security:
         - BearerAuth: []
+  
       parameters:
         - $ref: "#/components/parameters/OnboardIdParam"
+  
       responses:
         "200":
-          description: Debit note list
+          description: List of debit notes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                    example: 1
+                  debit_notes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        debitnote_id:
+                          type: string
+                          example: "dn_abc123"
+                        debitnote_number:
+                          type: string
+                          example: "DN-2025-0001"
+                        billing_reference:
+                          type: string
+                          example: "INV-2025-0001"
+                        issue_date:
+                          type: string
+                          format: date
+                          example: "2025-12-03"
+                        status:
+                          type: string
+                          example: "CLEARED"
+                        payable_amount:
+                          type: number
+                          format: float
+                          example: 100.00
+  
+        "401":
+          description: Unauthorized – Invalid or missing token
+  
+        "500":
+          description: Internal server error
 
   # =========================
   # NOTIFICATION CONFIG
