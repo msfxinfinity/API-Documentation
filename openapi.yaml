@@ -480,24 +480,23 @@ paths:
                 - $ref: '#/components/schemas/ReportInvoiceRequest'
               discriminator:
                 propertyName: submission_type
-  
+      
             examples:
               clearInvoice:
-                summary: Clear Invoice Example
+                summary: Clear Invoice
                 value:
                   submission_type: clear
-                  invoice_number: INV-1001
+                  invoice_number: INV-001
                   issue_date: "2024-01-01"
                   total_amount: 1150.00
-  
+      
               reportInvoice:
-                summary: Report Invoice Example
+                summary: Report Invoice
                 value:
                   submission_type: report
-                  invoice_number: INV-1002
+                  invoice_number: INV-002
                   issue_date: "2024-01-01"
-                  total_amount: 1150.00
-  
+                  total_amount: 1150.00  
       responses:
         "200":
           description: Invoice processed successfully
