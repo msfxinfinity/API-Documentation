@@ -1,0 +1,377 @@
+openapi: 3.0.3
+info:
+  title: MOLIM E-Invoicing API
+  version: 1.0.0
+  description: Cleaned and validated OpenAPI specification rebuilt from Postman collection.
+servers:
+- url: http://{remote_hostname}:{port}
+  variables:
+    remote_hostname:
+      default: api.example.com
+    port:
+      default: '80'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+paths:
+  /v1/e-invoicing/auth:
+    post:
+      summary: Auth
+      responses:
+        '200':
+          description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+  /v1/e-invoicing/onboardings:
+    post:
+      summary: Onboard Both
+      responses:
+        '200':
+          description: Successful response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - BearerAuth: []
+    get:
+      summary: List Onboardings
+      responses:
+        '200':
+          description: Successful response
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/invoices:
+    post:
+      summary: Advance Payment
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - BearerAuth: []
+    get:
+      summary: List Invoices By Filter
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: customer_vat
+        in: query
+        required: false
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/credit-notes:
+    post:
+      summary: Report Credit Note Copy
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - BearerAuth: []
+    get:
+      summary: List All CreditNotes
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/debit-notes:
+    post:
+      summary: Report Debit Note
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - BearerAuth: []
+    get:
+      summary: List All DebitNotes
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/notify-config:
+    post:
+      summary: Notify Config
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/docs-xls:
+    post:
+      summary: Generate Excel File
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: customer_vat
+        in: query
+        required: false
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/tasks/{task_id}:
+    get:
+      summary: Get Task
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/docs-xls/{file_id}:
+    get:
+      summary: Download Excel File
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/invoices/pdfs/{invoice_id}:
+    get:
+      summary: Get Invoice PDF
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/credit-notes/pdfs/{credit_note_id}:
+    get:
+      summary: Get Credit Note PDF
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: credit_note_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/credit-notes/{credit_note_id}:
+    get:
+      summary: Get CreditNote XML
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: credit_note_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/invoices/{invoice_id}:
+    get:
+      summary: Get Invoice
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing:
+    get:
+      summary: EGS-Info
+      responses:
+        '200':
+          description: Successful response
+  /v1/e-invoicing/{onboard_id}/credit-notes/{credit_note_number}:
+    get:
+      summary: Get CreditNote
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: credit_note_number
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
+  /v1/e-invoicing/{onboard_id}/invoices/{debit_note_id}:
+    get:
+      summary: Get DebitNote
+      responses:
+        '200':
+          description: Successful response
+      parameters:
+      - name: onboard_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: debit_note_id
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - BearerAuth: []
