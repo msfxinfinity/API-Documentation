@@ -1,9 +1,47 @@
 openapi: 3.0.3
-info:
-  title: MOLIM E-Invoicing API
-  version: 2.0.0
-  description: Fully aligned with Postman collection 02-MOLIM.
+openapi: 3.0.3
 
+info:
+  title: GoAgile E-Invoicing RESTful APIs
+  version: 2.0.0
+  description: |
+    ## GoAgile E-Invoice APIs
+
+    The **GoAgile E-Invoice APIs** provide a powerful, simple, and scalable solution  
+    for seamless e-invoicing compliance with **ZATCA’s FATOORAH regulations**.
+
+    Designed for:
+
+    - **Phase 1 (Generation)**
+    - **Phase 2 (Integration & Clearance)**
+
+    These APIs enable businesses to generate, validate, sign, report, and clear
+    electronic invoices in full accordance with ZATCA standards.
+
+    With GoAgile’s modern RESTful architecture, developers can quickly integrate
+    invoicing capabilities into ERP, POS, and custom systems—ensuring
+    reliability, speed, and regulatory compliance without complexity.
+
+    ---
+
+    ## Key Features
+
+    - ✅ ZATCA-compliant e-invoice generation & QR code embedding  
+    - 🔐 Secure XML signing and Phase 2 clearance integration  
+    - ⚡ High-performance APIs for large-volume invoicing  
+    - 🔄 Real-time validation, reporting, and monitoring  
+    - 🧩 Easy integration with ERP, POS, and custom software  
+
+  termsOfService: https://goagile.com/terms
+
+  contact:
+    name: GoAgile API Support
+    email: support@goagile.com
+    url: https://goagile.com
+
+  license:
+    name: Proprietary
+      
 servers:
   - url: http://{remote_hostname}:{port}
     variables:
