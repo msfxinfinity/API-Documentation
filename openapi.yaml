@@ -364,6 +364,70 @@ components:
         whatsapp_config:
           $ref: "#/components/schemas/WhatsappConfig"
 
+    # ===============================
+    # Clear & Report Invoice Request
+    # ===============================
+    ClearInvoiceRequest:
+      type: object
+      required:
+        - submission_type
+        - invoice_number
+        - issue_date
+        - total_amount
+      properties:
+        submission_type:
+          type: string
+          enum: [clear]
+          description: Indicates invoice clearance (Phase 2).
+        invoice_number:
+          type: string
+        issue_date:
+          type: string
+          format: date
+        total_amount:
+          type: number
+          format: float
+        clearance_reason:
+          type: string
+          description: Required for clearance processing.
+    
+    ReportInvoiceRequest:
+      type: object
+      required:
+        - submission_type
+        - invoice_number
+        - issue_date
+        - total_amount
+      properties:
+        submission_type:
+          type: string
+          enum: [report]
+          description: Indicates invoice reporting (Phase 1).
+        invoice_number:
+          type: string
+        issue_date:
+          type: string
+          format: date
+        total_amount:
+          type: number
+          format: float
+        reporting_channel:
+          type: string
+          description: Reporting channel identifier.
+    
+    InvoiceSubmissionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        invoice_id:
+          type: string
+          example: 123456789
+        zatca_status:
+          type: string
+          example: CLEARED
+
 paths:
 
   /v1/e-invoicing/auth:
@@ -385,34 +449,62 @@ paths:
 
   /v1/e-invoicing/{onboard_id}/invoices:
     post:
+      tags:
+        - Invoices
+      summary: Submit Invoice (Clear or Report)
+      description: |
+        This endpoint is used for both:
+  
+        - **Clear Invoice (Phase 2 Clearance)**
+        - **Report Invoice (Phase 1 / Simplified Reporting)**
+  
+        The request body structure differs depending on the `submission_type`.
+  
       security:
         - BearerAuth: []
+  
       parameters:
         - name: onboard_id
           in: path
           required: true
           schema:
             type: string
+  
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BaseDocument"
+              oneOf:
+                - $ref: '#/components/schemas/ClearInvoiceRequest'
+                - $ref: '#/components/schemas/ReportInvoiceRequest'
+              discriminator:
+                propertyName: submission_type
+  
+            examples:
+              clearInvoice:
+                summary: Clear Invoice Example
+                value:
+                  submission_type: clear
+                  invoice_number: INV-1001
+                  issue_date: "2024-01-01"
+                  total_amount: 1150.00
+  
+              reportInvoice:
+                summary: Report Invoice Example
+                value:
+                  submission_type: report
+                  invoice_number: INV-1002
+                  issue_date: "2024-01-01"
+                  total_amount: 1150.00
+  
       responses:
         "200":
-          description: Invoice processed
+          description: Invoice processed successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  invoice_id:
-                    type: string
-                  zatca_status:
-                    type: string
+                $ref: '#/components/schemas/InvoiceSubmissionResponse'
 
   /v1/e-invoicing/{onboard_id}/credit-notes:
     post:
