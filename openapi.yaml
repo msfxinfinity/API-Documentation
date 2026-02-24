@@ -1,16 +1,17 @@
 openapi: 3.0.3
 info:
   title: MOLIM E-Invoicing API
-  version: 1.0.0
-  description: Cleaned and validated OpenAPI specification rebuilt from Postman collection.
+  version: 2.0.0
+  description: Fully aligned with Postman collection 02-MOLIM.
+
 servers:
-- url: http://{remote_hostname}:{port}
-  variables:
-    remote_hostname:
-      default: api.example.com
-    port:
-      default: '80'
-      
+  - url: http://{remote_hostname}:{port}
+    variables:
+      remote_hostname:
+        default: api.example.com
+      port:
+        default: "80"
+
 components:
 
   securitySchemes:
@@ -18,101 +19,86 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: >
-        Provide the access token obtained from the Auth endpoint.
-        Example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-  parameters:
-
-    OnboardIdParam:
-      name: onboard_id
-      in: path
-      required: true
-      schema:
-        type: string
-      description: Unique onboarding identifier for the device/company.
-
-    TaskIdParam:
-      name: task_id
-      in: path
-      required: true
-      schema:
-        type: string
-      description: Background task identifier returned from async operations.
-
-    InvoiceIdParam:
-      name: invoice_id
-      in: path
-      required: true
-      schema:
-        type: string
-      description: Unique invoice identifier.
-
-    StartDateQuery:
-      name: start_date
-      in: query
-      required: true
-      schema:
-        type: string
-        format: date
-      description: Start date filter (YYYY-MM-DD).
-
-    EndDateQuery:
-      name: end_date
-      in: query
-      required: true
-      schema:
-        type: string
-        format: date
-      description: End date filter (YYYY-MM-DD).
-
-    CustomerVatQuery:
-      name: customer_vat
-      in: query
-      required: false
-      schema:
-        type: string
-      description: Filter results by customer VAT number.
 
   schemas:
 
-    # =========================
+    # =============================
     # AUTH
-    # =========================
+    # =============================
 
     AuthRequest:
       type: object
-      required:
-        - vat_number
-        - username
-        - secret
+      required: [vat_number, username, secret]
       properties:
         vat_number:
           type: string
-          example: "311262046600003"
-          description: VAT number of the registered entity.
         username:
           type: string
-          example: "api"
-          description: API username.
         secret:
           type: string
-          example: "W3lc0m32eg$@p!"
-          description: API secret key.
 
     AuthResponse:
       type: object
       properties:
         token:
           type: string
-          description: Bearer access token.
         expires_in:
           type: integer
-          description: Token validity duration in seconds.
 
-    # =========================
-    # ADDRESS
-    # =========================
+    # =============================
+    # COMMON STRUCTURES
+    # =============================
+
+    TaxCategory:
+      type: object
+      properties:
+        id:
+          type: string
+        percent:
+          type: number
+          format: float
+        tax_type:
+          type: string
+
+    TaxSubtotal:
+      type: object
+      properties:
+        taxable_amount:
+          type: number
+        tax_amount:
+          type: number
+        tax_percent:
+          type: number
+        tax_category:
+          $ref: "#/components/schemas/TaxCategory"
+
+    TaxTotal:
+      type: object
+      properties:
+        currency:
+          type: string
+        tax_amount:
+          type: number
+        rounding_amount:
+          type: number
+        tax_subtotal:
+          $ref: "#/components/schemas/TaxSubtotal"
+
+    AllowanceCharge:
+      type: object
+      properties:
+        charge_indicator:
+          type: boolean
+        reason:
+          type: string
+        amount:
+          type: number
+        base_amount:
+          type: number
+        currency:
+          type: string
+        tax_category:
+          $ref: "#/components/schemas/TaxCategory"
 
     Address:
       type: object
@@ -121,349 +107,231 @@ components:
           type: string
         building_number:
           type: string
-        city:
+        plot_identification:
           type: string
-        postal_code:
+        city_subdivision_name:
+          type: string
+        city_name:
+          type: string
+        postal_zone:
           type: string
         country:
           type: string
-          example: "SA"
-      description: Standard postal address structure.
+        country_subentity:
+          type: string
 
-    # =========================
-    # SUPPLIER
-    # =========================
-
-    SupplierInfo:
+    PartyIdentification:
       type: object
-      required:
-        - vat_number
-        - registration_name
       properties:
-        vat_number:
+        scheme:
           type: string
-          description: Supplier VAT registration number.
-        registration_name:
+        id:
           type: string
-          description: Legal registered company name.
-        address:
-          $ref: "#/components/schemas/Address"
 
-    # =========================
-    # CUSTOMER
-    # =========================
-
-    CustomerInfo:
+    Party:
       type: object
       properties:
         vat_number:
           type: string
-          description: Customer VAT number.
+        tax_type:
+          type: string
         registration_name:
           type: string
-          description: Customer legal name.
         address:
           $ref: "#/components/schemas/Address"
+        party_identification:
+          $ref: "#/components/schemas/PartyIdentification"
 
-    # =========================
-    # TAX STRUCTURE
-    # =========================
-
-    TaxSubtotal:
+    Item:
       type: object
       properties:
-        taxable_amount:
-          type: number
-          format: float
-          description: Taxable base amount.
-        tax_amount:
-          type: number
-          format: float
-          description: Calculated tax amount.
-        percent:
-          type: number
-          format: float
-          description: Tax percentage applied.
-
-    TaxTotal:
-      type: object
-      properties:
-        tax_amount:
-          type: number
-          format: float
-        tax_subtotals:
-          type: array
-          items:
-            $ref: "#/components/schemas/TaxSubtotal"
-
-    # =========================
-    # ALLOWANCE / CHARGE
-    # =========================
-
-    AllowanceCharge:
-      type: object
-      properties:
-        charge_indicator:
-          type: boolean
-          description: >
-            true = charge
-            false = allowance (discount)
-        amount:
-          type: number
-          format: float
-        reason:
+        name:
           type: string
-      x-note: >
-        Used for discounts or additional charges per invoice or per line.
+        classified_tax_category:
+          $ref: "#/components/schemas/TaxCategory"
 
-    # =========================
-    # INVOICE LINE
-    # =========================
-
-    InvoiceLine:
+    Price:
       type: object
-      required:
-        - id
-        - quantity
-        - price_per_unit
+      properties:
+        currency:
+          type: string
+        price_per_unit:
+          type: number
+        base_unit_code:
+          type: string
+        base_quantity:
+          type: number
+        allowance_charge:
+          $ref: "#/components/schemas/AllowanceCharge"
+
+    DocumentReference:
+      type: object
       properties:
         id:
           type: string
+        issue_date:
+          type: string
+          format: date
+        issue_time:
+          type: string
+
+    InvoiceLine:
+      type: object
+      properties:
+        id:
+          type: string
+        unit_code:
+          type: string
         quantity:
           type: number
-          format: float
-        price_per_unit:
+        amount:
           type: number
-          format: float
-          description: Base amount minus discount amount.
-        allowance_charges:
-          type: array
-          items:
-            $ref: "#/components/schemas/AllowanceCharge"
+        doc_ref:
+          $ref: "#/components/schemas/DocumentReference"
         tax_total:
           $ref: "#/components/schemas/TaxTotal"
+        item:
+          $ref: "#/components/schemas/Item"
+        price:
+          $ref: "#/components/schemas/Price"
 
-    # =========================
-    # LEGAL TOTALS
-    # =========================
-
-    LegalMonetaryTotal:
+    LegalMonitoryTotal:
       type: object
       properties:
-        line_extension_amount:
+        total_amount:
           type: number
-          format: float
         tax_exclusive_amount:
           type: number
-          format: float
         tax_inclusive_amount:
           type: number
-          format: float
+        allowance_total_amount:
+          type: number
+        prepaid_amount:
+          type: number
         payable_amount:
           type: number
-          format: float
 
-    # =========================
-    # INVOICE REQUEST
-    # =========================
-
-    InvoiceRequest:
+    Notification:
       type: object
-      required:
-        - invoice_number
-        - issue_date
-        - supplier
-        - customer
-        - invoice_lines
       properties:
-    
+        notification_type:
+          type: string
+        receiver_id:
+          type: string
+
+    # =============================
+    # BASE DOCUMENT
+    # =============================
+
+    BaseDocument:
+      type: object
+      properties:
         invoice_number:
           type: string
-          description: Unique invoice number generated by ERP system.
-          example: "INV-2025-0001"
-    
-        issue_date:
-          type: string
-          format: date
-          description: Invoice issue date in YYYY-MM-DD format.
-          example: "2025-12-01"
-    
-        invoice_type:
-          type: string
-          description: >
-            Type of invoice.
-            - standard
-            - simplified
-            - advance_payment
-          example: "standard"
-    
-        supplier:
-          $ref: "#/components/schemas/SupplierInfo"
-    
-        customer:
-          $ref: "#/components/schemas/CustomerInfo"
-    
-        invoice_lines:
-          type: array
-          description: List of invoice line items.
-          items:
-            $ref: "#/components/schemas/InvoiceLine"
-    
-        tax_total:
-          $ref: "#/components/schemas/TaxTotal"
-    
-        legal_monetary_total:
-          $ref: "#/components/schemas/LegalMonetaryTotal"
-
-    # =========================
-    # CREDIT NOTE REQUEST
-    # =========================
-
-    CreditNoteRequest:
-      type: object
-      required:
-        - creditnote_number
-        - issue_date
-        - supplier
-        - customer
-        - invoice_lines
-      properties:
-    
         creditnote_number:
           type: string
-          description: Unique credit note reference number.
-          example: "CN-2025-0001"
-    
-        billing_reference:
-          type: string
-          description: Reference to the original invoice being adjusted.
-          example: "INV-2025-0001"
-    
-        issue_date:
-          type: string
-          format: date
-          description: Credit note issue date (YYYY-MM-DD).
-          example: "2025-12-02"
-    
-        creditnote_type:
-          type: string
-          description: >
-            Type of credit note.
-            - standard
-            - simplified
-          example: "standard"
-    
-        supplier:
-          $ref: "#/components/schemas/SupplierInfo"
-    
-        customer:
-          $ref: "#/components/schemas/CustomerInfo"
-    
-        invoice_lines:
-          type: array
-          description: Line items being credited.
-          items:
-            $ref: "#/components/schemas/InvoiceLine"
-    
-        tax_total:
-          $ref: "#/components/schemas/TaxTotal"
-    
-        legal_monetary_total:
-          $ref: "#/components/schemas/LegalMonetaryTotal"
-          
-    # =========================
-    # DEBIT NOTE REQUEST
-    # =========================
-
-    DebitNoteRequest:
-      type: object
-      required:
-        - debitnote_number
-        - issue_date
-        - supplier
-        - customer
-        - invoice_lines
-      properties:
-    
         debitnote_number:
           type: string
-          description: Unique debit note reference number.
-          example: "DN-2025-0001"
-    
+
+        invoice_type:
+          type: string
+        creditnote_type:
+          type: string
+        debitnote_type:
+          type: string
+
         billing_reference:
           type: string
-          description: Reference to the original invoice being adjusted.
-          example: "INV-2025-0001"
-    
+
         issue_date:
           type: string
           format: date
-          description: Debit note issue date (YYYY-MM-DD).
-          example: "2025-12-03"
-    
-        debitnote_type:
+        issue_time:
           type: string
-          description: >
-            Type of debit note.
-            - standard
-            - simplified
-          example: "standard"
-    
-        supplier:
-          $ref: "#/components/schemas/SupplierInfo"
-    
-        customer:
-          $ref: "#/components/schemas/CustomerInfo"
-    
-        invoice_lines:
-          type: array
-          description: Line items being debited.
-          items:
-            $ref: "#/components/schemas/InvoiceLine"
-    
-        tax_total:
-          $ref: "#/components/schemas/TaxTotal"
-    
-        legal_monetary_total:
-          $ref: "#/components/schemas/LegalMonetaryTotal"
-    # =========================
-    # NOTIFICATION CONFIG
-    # =========================
 
-    NotificationConfig:
-      type: object
-      properties:
-        callback_url:
+        due_date:
           type: string
-          format: uri
-          description: Webhook URL for status notifications.
-        active:
+          format: date
+
+        is_advance_payment:
           type: boolean
 
-    # =========================
-    # TASK RESPONSE
-    # =========================
+        language_id:
+          type: string
 
-    TaskResponse:
+        note:
+          type: string
+
+        doc_currency_code:
+          type: string
+
+        tax_currency_code:
+          type: string
+
+        payment_means:
+          type: string
+        payment_means_instruction_note:
+          type: string
+        payment_means_code:
+          type: integer
+
+        actual_delivery_date:
+          type: string
+          format: date
+        latest_delivery_date:
+          type: string
+          format: date
+
+        send_notification:
+          $ref: "#/components/schemas/Notification"
+
+        supplier_info:
+          $ref: "#/components/schemas/Party"
+
+        customer_info:
+          $ref: "#/components/schemas/Party"
+
+        allowance_charge:
+          $ref: "#/components/schemas/AllowanceCharge"
+
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+
+        legal_monitory_total:
+          $ref: "#/components/schemas/LegalMonitoryTotal"
+
+        invoice_lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+
+    # =============================
+    # NOTIFY CONFIG
+    # =============================
+
+    WhatsappConfig:
       type: object
       properties:
-        task_id:
+        access_token:
           type: string
-        status:
+        instance_id:
           type: string
-        message:
+        message_template:
           type: string
-paths:
 
-  # =========================
-  # AUTH
-  # =========================
+    NotifyConfig:
+      type: object
+      properties:
+        active:
+          type: boolean
+        whatsapp_config:
+          $ref: "#/components/schemas/WhatsappConfig"
+
+paths:
 
   /v1/e-invoicing/auth:
     post:
-      tags: [Authentication]
-      summary: Generate Access Token
-      description: Authenticate using VAT number and API credentials.
+      summary: Authenticate
       requestBody:
         required: true
         content:
@@ -472,117 +340,31 @@ paths:
               $ref: "#/components/schemas/AuthRequest"
       responses:
         "200":
-          description: Token generated successfully
+          description: Token generated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
 
-  # =========================
-  # ONBOARDING
-  # =========================
-
-  /v1/e-invoicing/onboardings:
-    post:
-      tags: [Onboarding]
-      summary: Onboard Device / Company
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              description: Onboarding payload from Postman collection.
-      responses:
-        "200":
-          description: Onboarding successful
-
-    get:
-      tags: [Onboarding]
-      summary: List Onboardings
-      security:
-        - BearerAuth: []
-      responses:
-        "200":
-          description: List of onboarded devices
-
-  # =========================
-  # INVOICES
-  # =========================
-
   /v1/e-invoicing/{onboard_id}/invoices:
     post:
-      tags:
-        - Invoices
-      summary: Create or Report Invoice
-      description: >
-        Submits an invoice for ZATCA processing.
-        
-        This endpoint supports:
-        - Clear invoice (Phase 2 clearance)
-        - Report invoice (Phase 1 reporting)
-        - Advance payment invoice
-        
-        The behavior depends on invoice_type and onboarding configuration.
-  
       security:
         - BearerAuth: []
-  
       parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-  
+        - name: onboard_id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InvoiceRequest"
-            examples:
-  
-              ClearInvoiceExample:
-                summary: Standard Clear Invoice
-                value:
-                  invoice_number: "INV-2025-0001"
-                  issue_date: "2025-12-01"
-                  invoice_type: "standard"
-                  supplier:
-                    vat_number: "311262046600003"
-                    registration_name: "GoAgile Technologies"
-                  customer:
-                    vat_number: "311262046600003"
-                    registration_name: "Client Company"
-                  invoice_lines:
-                    - id: "1"
-                      quantity: 2
-                      price_per_unit: 375.65
-                  legal_monetary_total:
-                    payable_amount: 751.30
-  
-              AdvancePaymentExample:
-                summary: Advance Payment Invoice
-                value:
-                  invoice_number: "ADV-2025-0001"
-                  issue_date: "2025-12-01"
-                  invoice_type: "advance_payment"
-                  supplier:
-                    vat_number: "311262046600003"
-                    registration_name: "GoAgile Technologies"
-                  customer:
-                    vat_number: "311262046600003"
-                    registration_name: "Client Company"
-                  invoice_lines:
-                    - id: "1"
-                      quantity: 1
-                      price_per_unit: 1000.00
-                  legal_monetary_total:
-                    payable_amount: 1000.00
-  
+              $ref: "#/components/schemas/BaseDocument"
       responses:
-  
         "200":
-          description: Invoice processed successfully
+          description: Invoice processed
           content:
             application/json:
               schema:
@@ -590,438 +372,67 @@ paths:
                 properties:
                   status:
                     type: string
-                    example: "success"
                   invoice_id:
                     type: string
-                    example: "abc123"
                   zatca_status:
                     type: string
-                    example: "CLEARED"
-  
-        "400":
-          description: Invalid request payload
-  
-        "401":
-          description: Unauthorized – Invalid or missing token
-  
-        "422":
-          description: Validation error from ZATCA
-  
-        "500":
-          description: Internal server error
-
-    get:
-      tags:
-        - Invoices
-      summary: List Invoices by Filter
-      description: >
-        Retrieve invoices for a specific onboarded device.
-        
-        Supports filtering by:
-        - start_date
-        - end_date
-        - customer_vat
-        
-        If no filters are provided, all invoices for the onboard_id will be returned.
-  
-      security:
-        - BearerAuth: []
-  
-      parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-        - $ref: "#/components/parameters/StartDateQuery"
-        - $ref: "#/components/parameters/EndDateQuery"
-        - $ref: "#/components/parameters/CustomerVatQuery"
-  
-      responses:
-        "200":
-          description: List of invoices
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  total_count:
-                    type: integer
-                    example: 2
-                  invoices:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        invoice_id:
-                          type: string
-                          example: "abc123"
-                        invoice_number:
-                          type: string
-                          example: "INV-2025-0001"
-                        issue_date:
-                          type: string
-                          format: date
-                          example: "2025-12-01"
-                        status:
-                          type: string
-                          example: "CLEARED"
-                        payable_amount:
-                          type: number
-                          format: float
-                          example: 751.30
-  
-        "401":
-          description: Unauthorized – Invalid or missing token
-  
-        "500":
-          description: Internal server error
-          
-
-  # =========================
-  # CREDIT NOTES
-  # =========================
 
   /v1/e-invoicing/{onboard_id}/credit-notes:
     post:
-      tags:
-        - Credit Notes
-      summary: Create / Report Credit Note
-      description: >
-        Submits a credit note for invoice adjustment.
-        
-        Used when:
-        - Invoice cancellation
-        - Partial refund
-        - Overcharge correction
-        
-        Must reference the original invoice via billing_reference.
-  
       security:
         - BearerAuth: []
-  
       parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-  
+        - name: onboard_id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreditNoteRequest"
-            examples:
-  
-              StandardCreditNote:
-                summary: Standard Credit Note Example
-                value:
-                  creditnote_number: "CN-2025-0001"
-                  billing_reference: "INV-2025-0001"
-                  issue_date: "2025-12-02"
-                  creditnote_type: "standard"
-                  supplier:
-                    vat_number: "311262046600003"
-                    registration_name: "GoAgile Technologies"
-                  customer:
-                    vat_number: "311262046600003"
-                    registration_name: "Client Company"
-                  invoice_lines:
-                    - id: "1"
-                      quantity: 1
-                      price_per_unit: 375.65
-                  legal_monetary_total:
-                    payable_amount: 375.65
-  
-      responses:
-  
-        "200":
-          description: Credit note processed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  creditnote_id:
-                    type: string
-                    example: "cn_abc123"
-                  zatca_status:
-                    type: string
-                    example: "CLEARED"
-  
-        "400":
-          description: Invalid request payload
-  
-        "401":
-          description: Unauthorized – Invalid or missing token
-  
-        "422":
-          description: Validation error from ZATCA
-  
-        "500":
-          description: Internal server error
-    
-    get:
-      tags:
-        - Credit Notes
-      summary: List Credit Notes
-      description: >
-        Retrieve all credit notes associated with the given onboard_id.
-        
-        Can be used to:
-        - Check adjustment history
-        - Validate invoice corrections
-        - Track credit note processing status
-  
-      security:
-        - BearerAuth: []
-  
-      parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-  
+              $ref: "#/components/schemas/BaseDocument"
       responses:
         "200":
-          description: List of credit notes
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  total_count:
-                    type: integer
-                    example: 2
-                  credit_notes:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        creditnote_id:
-                          type: string
-                          example: "cn_abc123"
-                        creditnote_number:
-                          type: string
-                          example: "CN-2025-0001"
-                        billing_reference:
-                          type: string
-                          example: "INV-2025-0001"
-                        issue_date:
-                          type: string
-                          format: date
-                          example: "2025-12-02"
-                        status:
-                          type: string
-                          example: "CLEARED"
-                        payable_amount:
-                          type: number
-                          format: float
-                          example: 375.65
-  
-        "401":
-          description: Unauthorized – Invalid or missing token
-  
-        "500":
-          description: Internal server error
-
-  # =========================
-  # DEBIT NOTES
-  # =========================
+          description: Credit note processed
 
   /v1/e-invoicing/{onboard_id}/debit-notes:
     post:
-      tags:
-        - Debit Notes
-      summary: Create / Report Debit Note
-      description: >
-        Submits a debit note for invoice adjustment.
-        
-        Used when:
-        - Additional charge is required
-        - Underbilling correction
-        - Post-issuance price increase
-  
-        Must reference the original invoice via billing_reference.
-  
       security:
         - BearerAuth: []
-  
       parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-  
+        - name: onboard_id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DebitNoteRequest"
-            examples:
-  
-              StandardDebitNote:
-                summary: Standard Debit Note Example
-                value:
-                  debitnote_number: "DN-2025-0001"
-                  billing_reference: "INV-2025-0001"
-                  issue_date: "2025-12-03"
-                  debitnote_type: "standard"
-                  supplier:
-                    vat_number: "311262046600003"
-                    registration_name: "GoAgile Technologies"
-                  customer:
-                    vat_number: "311262046600003"
-                    registration_name: "Client Company"
-                  invoice_lines:
-                    - id: "1"
-                      quantity: 1
-                      price_per_unit: 100.00
-                  legal_monetary_total:
-                    payable_amount: 100.00
-  
-      responses:
-  
-        "200":
-          description: Debit note processed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  debitnote_id:
-                    type: string
-                    example: "dn_abc123"
-                  zatca_status:
-                    type: string
-                    example: "CLEARED"
-  
-        "400":
-          description: Invalid request payload
-  
-        "401":
-          description: Unauthorized – Invalid or missing token
-  
-        "422":
-          description: Validation error from ZATCA
-  
-        "500":
-          description: Internal server error
-
-    get:
-      tags:
-        - Debit Notes
-      summary: List Debit Notes
-      description: >
-        Retrieve all debit notes associated with the given onboard_id.
-        
-        Used to:
-        - Track additional charges
-        - Validate adjustments
-        - Monitor ZATCA processing status
-  
-      security:
-        - BearerAuth: []
-  
-      parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-  
+              $ref: "#/components/schemas/BaseDocument"
       responses:
         "200":
-          description: List of debit notes
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  total_count:
-                    type: integer
-                    example: 1
-                  debit_notes:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        debitnote_id:
-                          type: string
-                          example: "dn_abc123"
-                        debitnote_number:
-                          type: string
-                          example: "DN-2025-0001"
-                        billing_reference:
-                          type: string
-                          example: "INV-2025-0001"
-                        issue_date:
-                          type: string
-                          format: date
-                          example: "2025-12-03"
-                        status:
-                          type: string
-                          example: "CLEARED"
-                        payable_amount:
-                          type: number
-                          format: float
-                          example: 100.00
-  
-        "401":
-          description: Unauthorized – Invalid or missing token
-  
-        "500":
-          description: Internal server error
-
-  # =========================
-  # NOTIFICATION CONFIG
-  # =========================
+          description: Debit note processed
 
   /v1/e-invoicing/{onboard_id}/notify-config:
     post:
-      tags: [Notifications]
-      summary: Configure Webhook Notification
       security:
         - BearerAuth: []
       parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
+        - name: onboard_id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NotificationConfig"
+              $ref: "#/components/schemas/NotifyConfig"
       responses:
         "200":
-          description: Notification configuration updated
-
-  # =========================
-  # EXCEL GENERATION
-  # =========================
-
-  /v1/e-invoicing/{onboard_id}/docs-xls:
-    post:
-      tags: [Reports]
-      summary: Generate Excel Report
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-        - $ref: "#/components/parameters/StartDateQuery"
-        - $ref: "#/components/parameters/EndDateQuery"
-        - $ref: "#/components/parameters/CustomerVatQuery"
-      responses:
-        "200":
-          description: Excel generation started
-
-  # =========================
-  # TASK STATUS
-  # =========================
-
-  /v1/e-invoicing/{onboard_id}/tasks/{task_id}:
-    get:
-      tags: [Tasks]
-      summary: Get Task Status
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/OnboardIdParam"
-        - $ref: "#/components/parameters/TaskIdParam"
-      responses:
-        "200":
-          description: Task status
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TaskResponse"
+          description: Notification updated
