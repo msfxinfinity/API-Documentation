@@ -2,67 +2,136 @@ openapi: 3.0.3
 
 info:
   title: GoAgile E-Invoicing RESTful APIs
-  version: 2.0.0
+  version: 2.1.0
   description: |
-    ## GoAgile E-Invoice APIs
-
-    The **GoAgile E-Invoice APIs** provide a powerful, simple, and scalable solution  
-    for seamless e-invoicing compliance with **ZATCA’s FATOORAH regulations**.
-
-    Designed for:
-
-    - **Phase 1 (Generation)**
-    - **Phase 2 (Integration & Clearance)**
-
-    These APIs enable businesses to generate, validate, sign, report, and clear
-    electronic invoices in full accordance with ZATCA standards.
-
-    With GoAgile’s modern RESTful architecture, developers can quickly integrate
-    invoicing capabilities into ERP, POS, and custom systems—ensuring
-    reliability, speed, and regulatory compliance without complexity.
-
-    ---
-
-    ## Key Features
-
-    - ✅ ZATCA-compliant e-invoice generation & QR code embedding  
-    - 🔐 Secure XML signing and Phase 2 clearance integration  
-    - ⚡ High-performance APIs for large-volume invoicing  
-    - 🔄 Real-time validation, reporting, and monitoring  
-    - 🧩 Easy integration with ERP, POS, and custom software  
-
+    GoAgile E-Invoice APIs for onboarding, issuing, reporting, clearing,
+    querying, and exporting e-invoicing documents.
   termsOfService: https://goagile.com/terms
-
   contact:
     name: GoAgile API Support
     email: support@goagile.com
     url: https://goagile.com
-
   license:
     name: Proprietary
-      
+
 servers:
   - url: http://{remote_hostname}:{port}
     variables:
       remote_hostname:
-        default: api.example.com
+        default: 77.240.88.162
       port:
-        default: "80"
+        default: "9090"
+
+tags:
+  - name: Authentication
+  - name: Onboardings
+  - name: E-Invoicing
+  - name: Invoices
+  - name: Credit Notes
+  - name: Debit Notes
+  - name: Notification
+  - name: Export
+  - name: Tasks
 
 components:
-
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
 
+  parameters:
+    OnboardId:
+      name: onboard_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Onboarding identifier.
+
+    InvoiceId:
+      name: invoice_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Invoice identifier or invoice number.
+
+    InvoiceNumber:
+      name: invoice_number
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Invoice number used for PDF retrieval.
+
+    CreditNoteId:
+      name: credit_note_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Credit note identifier or credit note number.
+
+    CreditNoteNumber:
+      name: credit_note_number
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Credit note number used for PDF retrieval.
+
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Async task identifier.
+
+    FileId:
+      name: file_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Generated file identifier.
+
+    StartDate:
+      name: start_date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+
+    EndDate:
+      name: end_date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+
+    CustomerVat:
+      name: customer_vat
+      in: query
+      required: false
+      schema:
+        type: string
+
+    Format:
+      name: format
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [json, xml]
+      description: Response format. Use `xml` to receive XML output.
+
   schemas:
-
-    # =============================
-    # AUTH
-    # =============================
-
     AuthRequest:
       type: object
       required: [vat_number, username, secret]
@@ -81,10 +150,101 @@ components:
           type: string
         expires_in:
           type: integer
+        token_type:
+          type: string
+          example: Bearer
+      additionalProperties: true
 
-    # =============================
-    # COMMON STRUCTURES
-    # =============================
+    ApiMessage:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+      additionalProperties: true
+
+    OnboardingRequest:
+      type: object
+      required:
+        - otp
+        - vat_number
+        - device_id
+        - invoice_type
+        - org_name
+        - org_unit
+        - business_category
+        - registered_address
+        - country_code
+        - email_id
+      properties:
+        otp:
+          type: string
+        vat_number:
+          type: string
+        device_id:
+          type: string
+        invoice_type:
+          type: string
+          enum: [standard, simplified, both]
+        org_name:
+          type: string
+        org_unit:
+          type: string
+        business_category:
+          type: string
+        registered_address:
+          type: string
+        country_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        email_id:
+          type: string
+          format: email
+
+    Address:
+      type: object
+      properties:
+        street_name:
+          type: string
+        building_number:
+          type: string
+        plot_identification:
+          type: string
+        city_subdivision_name:
+          type: string
+        city_name:
+          type: string
+        postal_zone:
+          type: string
+        country:
+          type: string
+        country_subentity:
+          type: string
+
+    PartyIdentification:
+      type: object
+      properties:
+        scheme:
+          type: string
+        id:
+          type: string
+
+    Party:
+      type: object
+      properties:
+        vat_number:
+          type: string
+        tax_type:
+          type: string
+        registration_name:
+          type: string
+        address:
+          $ref: "#/components/schemas/Address"
+        party_identification:
+          $ref: "#/components/schemas/PartyIdentification"
 
     TaxCategory:
       type: object
@@ -136,48 +296,6 @@ components:
           type: string
         tax_category:
           $ref: "#/components/schemas/TaxCategory"
-
-    Address:
-      type: object
-      properties:
-        street_name:
-          type: string
-        building_number:
-          type: string
-        plot_identification:
-          type: string
-        city_subdivision_name:
-          type: string
-        city_name:
-          type: string
-        postal_zone:
-          type: string
-        country:
-          type: string
-        country_subentity:
-          type: string
-
-    PartyIdentification:
-      type: object
-      properties:
-        scheme:
-          type: string
-        id:
-          type: string
-
-    Party:
-      type: object
-      properties:
-        vat_number:
-          type: string
-        tax_type:
-          type: string
-        registration_name:
-          type: string
-        address:
-          $ref: "#/components/schemas/Address"
-        party_identification:
-          $ref: "#/components/schemas/PartyIdentification"
 
     Item:
       type: object
@@ -232,7 +350,7 @@ components:
         price:
           $ref: "#/components/schemas/Price"
 
-    LegalMonitoryTotal:
+    LegalMonetaryTotal:
       type: object
       properties:
         total_amount:
@@ -256,96 +374,6 @@ components:
         receiver_id:
           type: string
 
-    # =============================
-    # BASE DOCUMENT
-    # =============================
-
-    BaseDocument:
-      type: object
-      properties:
-        invoice_number:
-          type: string
-        creditnote_number:
-          type: string
-        debitnote_number:
-          type: string
-
-        invoice_type:
-          type: string
-        creditnote_type:
-          type: string
-        debitnote_type:
-          type: string
-
-        billing_reference:
-          type: string
-
-        issue_date:
-          type: string
-          format: date
-        issue_time:
-          type: string
-
-        due_date:
-          type: string
-          format: date
-
-        is_advance_payment:
-          type: boolean
-
-        language_id:
-          type: string
-
-        note:
-          type: string
-
-        doc_currency_code:
-          type: string
-
-        tax_currency_code:
-          type: string
-
-        payment_means:
-          type: string
-        payment_means_instruction_note:
-          type: string
-        payment_means_code:
-          type: integer
-
-        actual_delivery_date:
-          type: string
-          format: date
-        latest_delivery_date:
-          type: string
-          format: date
-
-        send_notification:
-          $ref: "#/components/schemas/Notification"
-
-        supplier_info:
-          $ref: "#/components/schemas/Party"
-
-        customer_info:
-          $ref: "#/components/schemas/Party"
-
-        allowance_charge:
-          $ref: "#/components/schemas/AllowanceCharge"
-
-        tax_total:
-          $ref: "#/components/schemas/TaxTotal"
-
-        legal_monitory_total:
-          $ref: "#/components/schemas/LegalMonitoryTotal"
-
-        invoice_lines:
-          type: array
-          items:
-            $ref: "#/components/schemas/InvoiceLine"
-
-    # =============================
-    # NOTIFY CONFIG
-    # =============================
-
     WhatsappConfig:
       type: object
       properties:
@@ -358,209 +386,847 @@ components:
 
     NotifyConfig:
       type: object
+      required: [active, whatsapp_config]
       properties:
         active:
           type: boolean
         whatsapp_config:
           $ref: "#/components/schemas/WhatsappConfig"
 
-    # ===============================
-    # Clear & Report Invoice Request
-    # ===============================
-    ClearInvoiceRequest:
+    InvoicePayload:
       type: object
-      required:
-        - submission_type
-        - invoice_number
-        - issue_date
-        - total_amount
       properties:
-        submission_type:
-          type: string
-          enum: [clear]
-          description: Indicates invoice clearance (Phase 2).
         invoice_number:
+          type: string
+        invoice_type:
+          type: string
+          enum: [standard, simplified]
+        is_advance_payment:
+          type: boolean
+        issue_date:
+          type: string
+          format: date
+        issue_time:
+          type: string
+        due_date:
+          type: string
+          format: date
+        language_id:
+          type: string
+        note:
+          type: string
+        doc_currency_code:
+          type: string
+        tax_currency_code:
+          type: string
+        send_notification:
+          $ref: "#/components/schemas/Notification"
+        payment_means:
+          type: string
+        payment_means_instruction_note:
+          type: string
+        payment_means_code:
+          type: integer
+        actual_delivery_date:
+          type: string
+          format: date
+        latest_delivery_date:
+          type: string
+          format: date
+        supplier_info:
+          $ref: "#/components/schemas/Party"
+        customer_info:
+          $ref: "#/components/schemas/Party"
+        allowance_charge:
+          $ref: "#/components/schemas/AllowanceCharge"
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+        legal_monitory_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+        legal_monetary_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+        invoice_lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+
+    StandardInvoiceRequest:
+      allOf:
+        - $ref: "#/components/schemas/InvoicePayload"
+        - type: object
+          required:
+            - invoice_number
+            - invoice_type
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            invoice_type:
+              type: string
+              enum: [standard]
+
+    SimplifiedInvoiceRequest:
+      allOf:
+        - $ref: "#/components/schemas/InvoicePayload"
+        - type: object
+          required:
+            - invoice_number
+            - invoice_type
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            invoice_type:
+              type: string
+              enum: [simplified]
+
+    AdvancePaymentInvoiceRequest:
+      allOf:
+        - $ref: "#/components/schemas/InvoicePayload"
+        - type: object
+          required:
+            - invoice_number
+            - invoice_type
+            - is_advance_payment
+            - due_date
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            invoice_type:
+              type: string
+              enum: [standard]
+            is_advance_payment:
+              type: boolean
+              enum: [true]
+
+    CreditNotePayload:
+      type: object
+      properties:
+        creditnote_number:
+          type: string
+        creditnote_type:
+          type: string
+          enum: [standard, simplified]
+        billing_reference:
           type: string
         issue_date:
           type: string
           format: date
-        total_amount:
-          type: number
-          format: float
-        clearance_reason:
+        issue_time:
           type: string
-          description: Required for clearance processing.
-    
-    ReportInvoiceRequest:
+        language_id:
+          type: string
+        doc_currency_code:
+          type: string
+        tax_currency_code:
+          type: string
+        send_notification:
+          $ref: "#/components/schemas/Notification"
+        payment_means:
+          type: string
+        payment_means_instruction_note:
+          type: string
+        actual_delivery_date:
+          type: string
+          format: date
+        supplier_info:
+          $ref: "#/components/schemas/Party"
+        customer_info:
+          $ref: "#/components/schemas/Party"
+        allowance_charge:
+          $ref: "#/components/schemas/AllowanceCharge"
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+        legal_monitory_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+        legal_monetary_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+        invoice_lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+
+    StandardCreditNoteRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreditNotePayload"
+        - type: object
+          required:
+            - creditnote_number
+            - creditnote_type
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            creditnote_type:
+              type: string
+              enum: [standard]
+
+    SimplifiedCreditNoteRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreditNotePayload"
+        - type: object
+          required:
+            - creditnote_number
+            - creditnote_type
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            creditnote_type:
+              type: string
+              enum: [simplified]
+
+    DebitNotePayload:
       type: object
-      required:
-        - submission_type
-        - invoice_number
-        - issue_date
-        - total_amount
       properties:
-        submission_type:
+        debitnote_number:
           type: string
-          enum: [report]
-          description: Indicates invoice reporting (Phase 1).
-        invoice_number:
+        debitnote_type:
+          type: string
+          enum: [standard, simplified]
+        billing_reference:
           type: string
         issue_date:
           type: string
           format: date
-        total_amount:
-          type: number
-          format: float
-        reporting_channel:
+        issue_time:
           type: string
-          description: Reporting channel identifier.
-    
-    InvoiceSubmissionResponse:
+        payment_means:
+          type: string
+        payment_means_instruction_note:
+          type: string
+        actual_delivery_date:
+          type: string
+          format: date
+        latest_delivery_date:
+          type: string
+          format: date
+        supplier_info:
+          $ref: "#/components/schemas/Party"
+        customer_info:
+          $ref: "#/components/schemas/Party"
+        allowance_charge:
+          $ref: "#/components/schemas/AllowanceCharge"
+        tax_total:
+          $ref: "#/components/schemas/TaxTotal"
+        legal_monitory_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+        legal_monetary_total:
+          $ref: "#/components/schemas/LegalMonetaryTotal"
+        invoice_lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLine"
+
+    StandardDebitNoteRequest:
+      allOf:
+        - $ref: "#/components/schemas/DebitNotePayload"
+        - type: object
+          required:
+            - debitnote_number
+            - debitnote_type
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            debitnote_type:
+              type: string
+              enum: [standard]
+
+    SimplifiedDebitNoteRequest:
+      allOf:
+        - $ref: "#/components/schemas/DebitNotePayload"
+        - type: object
+          required:
+            - debitnote_number
+            - debitnote_type
+            - issue_date
+            - issue_time
+            - supplier_info
+            - customer_info
+            - invoice_lines
+          properties:
+            debitnote_type:
+              type: string
+              enum: [simplified]
+
+    TaskResponse:
       type: object
       properties:
+        task_id:
+          type: string
+          format: uuid
         status:
           type: string
-          example: success
-        invoice_id:
+        file_id:
           type: string
-          example: 123456789
-        zatca_status:
+          format: uuid
+        download_url:
           type: string
-          example: CLEARED
+          format: uri
+      additionalProperties: true
+
+    ObjectResponse:
+      type: object
+      additionalProperties: true
+
+    ListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
 
 paths:
-
   /v1/e-invoicing/auth:
     post:
-      summary: Authenticate
+      tags: [Authentication]
+      summary: Authenticate API user
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/AuthRequest"
+            example:
+              vat_number: "311262046600003"
+              username: "api"
+              secret: "your-secret"
       responses:
         "200":
-          description: Token generated
+          description: Authentication token returned.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
 
-  /v1/e-invoicing/{onboard_id}/invoices:
+  /v1/e-invoicing:
+    get:
+      tags: [E-Invoicing]
+      summary: Get EGS information
+      responses:
+        "200":
+          description: EGS info response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectResponse"
+
+  /v1/e-invoicing/onboardings:
     post:
-      tags:
-        - Invoices
-      summary: Submit Invoice (Clear or Report)
-      description: |
-        This endpoint is used for both:
-  
-        - **Clear Invoice (Phase 2 Clearance)**
-        - **Report Invoice (Phase 1 / Simplified Reporting)**
-  
-        The request body structure differs depending on the `submission_type`.
-  
+      tags: [Onboardings]
+      summary: Create onboarding
       security:
         - BearerAuth: []
-  
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingRequest"
+            examples:
+              standard:
+                summary: Onboard for standard invoices
+                value:
+                  otp: "123213"
+                  vat_number: "311262046600003"
+                  device_id: "Dev2"
+                  invoice_type: standard
+                  org_name: "Goagile Technologies"
+                  org_unit: "Riyadh"
+                  business_category: "IT"
+                  registered_address: "Al-Morabba"
+                  country_code: "SA"
+                  email_id: "support@goagile.com"
+              simplified:
+                summary: Onboard for simplified invoices
+                value:
+                  otp: "123213"
+                  vat_number: "311262046600003"
+                  device_id: "TEST-DEV1"
+                  invoice_type: simplified
+                  org_name: "Goagile Technologies"
+                  org_unit: "Riyadh"
+                  business_category: "IT"
+                  registered_address: "Al-Morabba"
+                  country_code: "SA"
+                  email_id: "support@goagile.com"
+              both:
+                summary: Onboard for both roles
+                value:
+                  otp: "507216"
+                  vat_number: "311262046600003"
+                  device_id: "04-LEI"
+                  invoice_type: both
+                  org_name: "Goagile Technologies"
+                  org_unit: "Riyadh"
+                  business_category: "IT"
+                  registered_address: "Al-Morabba"
+                  country_code: "SA"
+                  email_id: "support@goagile.com"
+      responses:
+        "200":
+          description: Onboarding created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectResponse"
+
+    get:
+      tags: [Onboardings]
+      summary: List onboardings
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Onboarding list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListResponse"
+
+  /v1/e-invoicing/{onboard_id}/invoices:
+    post:
+      tags: [Invoices]
+      summary: Submit invoice (clear, report, or advance payment)
+      description: |
+        This URL is used by multiple roles in the Postman collection.
+        `invoice_type` selects standard vs simplified flow.
+        `is_advance_payment=true` selects the advance-payment variant.
+      security:
+        - BearerAuth: []
       parameters:
-        - name: onboard_id
-          in: path
-          required: true
-          schema:
-            type: string
-  
+        - $ref: "#/components/parameters/OnboardId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               oneOf:
-                - $ref: '#/components/schemas/ClearInvoiceRequest'
-                - $ref: '#/components/schemas/ReportInvoiceRequest'
-              discriminator:
-                propertyName: submission_type
-      
+                - $ref: "#/components/schemas/StandardInvoiceRequest"
+                - $ref: "#/components/schemas/SimplifiedInvoiceRequest"
+                - $ref: "#/components/schemas/AdvancePaymentInvoiceRequest"
             examples:
-              clearInvoice:
-                summary: Clear Invoice
+              clear_standard:
+                summary: Clear invoice (standard)
                 value:
-                  submission_type: clear
-                  invoice_number: INV-001
-                  issue_date: "2024-01-01"
-                  total_amount: 1150.00
-      
-              reportInvoice:
-                summary: Report Invoice
+                  invoice_number: "POS00010"
+                  invoice_type: standard
+                  issue_date: "2026-01-06"
+                  issue_time: "10:00:00"
+                  payment_means: cash
+                  supplier_info:
+                    vat_number: "311262046600003"
+                    registration_name: "Saudi Credit Bureau"
+                  customer_info:
+                    vat_number: "300295616200003"
+                    registration_name: "Customer"
+                  legal_monitory_total:
+                    total_amount: 25
+                    payable_amount: 28.75
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      amount: 25
+              report_simplified:
+                summary: Report invoice (simplified)
                 value:
-                  submission_type: report
-                  invoice_number: INV-002
-                  issue_date: "2024-01-01"
-                  total_amount: 1150.00  
+                  invoice_number: "Invoice17"
+                  invoice_type: simplified
+                  issue_date: "2026-01-06"
+                  issue_time: "10:00:00"
+                  payment_means: cash
+                  supplier_info:
+                    vat_number: "311262046600003"
+                    registration_name: "Saudi Credit Bureau"
+                  customer_info:
+                    registration_name: "Retail Customer"
+                  legal_monitory_total:
+                    total_amount: 25
+                    payable_amount: 28.75
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      amount: 25
+              advance_payment:
+                summary: Advance payment invoice
+                value:
+                  invoice_number: "adv_payment_note"
+                  invoice_type: standard
+                  is_advance_payment: true
+                  due_date: "2023-08-20"
+                  issue_date: "2023-08-19"
+                  issue_time: "10:09:00"
+                  payment_means: cash
+                  supplier_info:
+                    vat_number: "311262046600003"
+                    registration_name: "Goagile Technologies"
+                  customer_info:
+                    vat_number: "2323233325"
+                    registration_name: "ABC Inc"
+                  legal_monitory_total:
+                    total_amount: 100000
+                    payable_amount: 115000
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      amount: 100000
       responses:
         "200":
-          description: Invoice processed successfully
+          description: Invoice processed.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InvoiceSubmissionResponse'
+                $ref: "#/components/schemas/ObjectResponse"
+
+    get:
+      tags: [Invoices]
+      summary: List invoices
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+        - $ref: "#/components/parameters/CustomerVat"
+      responses:
+        "200":
+          description: Invoice list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListResponse"
+
+  /v1/e-invoicing/{onboard_id}/invoices/{invoice_id}:
+    get:
+      tags: [Invoices]
+      summary: Get invoice by ID
+      description: |
+        This endpoint is also used in the collection for a debit-note retrieval sample.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/InvoiceId"
+        - $ref: "#/components/parameters/Format"
+      responses:
+        "200":
+          description: Invoice document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectResponse"
+            application/xml:
+              schema:
+                type: string
+
+  /v1/e-invoicing/{onboard_id}/invoices/pdfs/{invoice_number}:
+    get:
+      tags: [Invoices]
+      summary: Download invoice PDF
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/InvoiceNumber"
+      responses:
+        "200":
+          description: PDF binary stream.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
 
   /v1/e-invoicing/{onboard_id}/credit-notes:
     post:
+      tags: [Credit Notes]
+      summary: Submit credit note (clear or report)
       security:
         - BearerAuth: []
       parameters:
-        - name: onboard_id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OnboardId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BaseDocument"
+              oneOf:
+                - $ref: "#/components/schemas/StandardCreditNoteRequest"
+                - $ref: "#/components/schemas/SimplifiedCreditNoteRequest"
+            examples:
+              clear_standard:
+                summary: Clear credit note (standard)
+                value:
+                  creditnote_number: "CN21"
+                  creditnote_type: standard
+                  billing_reference: "00000POS010074"
+                  issue_date: "2026-01-04"
+                  issue_time: "02:30:00"
+                  supplier_info:
+                    vat_number: "311262046600003"
+                  customer_info:
+                    vat_number: "546254785693261"
+                  legal_monitory_total:
+                    total_amount: 25
+                    payable_amount: 28.75
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      amount: 25
+              report_simplified:
+                summary: Report credit note (simplified)
+                value:
+                  creditnote_number: "CN24"
+                  creditnote_type: simplified
+                  billing_reference: "Invoice16"
+                  issue_date: "2026-01-06"
+                  issue_time: "02:30:00"
+                  supplier_info:
+                    vat_number: "311262046600003"
+                  customer_info:
+                    vat_number: "546254785693261"
+                  legal_monitory_total:
+                    total_amount: 25
+                    payable_amount: 28.75
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 1
+                      amount: 25
       responses:
         "200":
-          description: Credit note processed
+          description: Credit note processed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectResponse"
+
+    get:
+      tags: [Credit Notes]
+      summary: List credit notes
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+      responses:
+        "200":
+          description: Credit note list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListResponse"
+
+  /v1/e-invoicing/{onboard_id}/credit-notes/{credit_note_id}:
+    get:
+      tags: [Credit Notes]
+      summary: Get credit note by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/CreditNoteId"
+        - $ref: "#/components/parameters/Format"
+      responses:
+        "200":
+          description: Credit note document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectResponse"
+            application/xml:
+              schema:
+                type: string
+
+  /v1/e-invoicing/{onboard_id}/credit-notes/pdfs/{credit_note_number}:
+    get:
+      tags: [Credit Notes]
+      summary: Download credit note PDF
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/CreditNoteNumber"
+      responses:
+        "200":
+          description: PDF binary stream.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
 
   /v1/e-invoicing/{onboard_id}/debit-notes:
     post:
+      tags: [Debit Notes]
+      summary: Submit debit note (clear or report)
       security:
         - BearerAuth: []
       parameters:
-        - name: onboard_id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OnboardId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BaseDocument"
+              oneOf:
+                - $ref: "#/components/schemas/StandardDebitNoteRequest"
+                - $ref: "#/components/schemas/SimplifiedDebitNoteRequest"
+            examples:
+              clear_standard:
+                summary: Clear debit note (standard)
+                value:
+                  debitnote_number: "inv-1007"
+                  debitnote_type: standard
+                  billing_reference: "Invoice Number: inv-84; Invoice Issue Date: 2023-08-16"
+                  issue_date: "2023-08-19"
+                  issue_time: "10:09:00"
+                  supplier_info:
+                    vat_number: "311262046600003"
+                  customer_info:
+                    vat_number: "2323233325"
+                  legal_monitory_total:
+                    total_amount: 60
+                    payable_amount: 69
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 20
+                      amount: 60
+              report_simplified:
+                summary: Report debit note (simplified)
+                value:
+                  debitnote_number: "dn-1008"
+                  debitnote_type: simplified
+                  billing_reference: "Invoice Number: inv-84; Invoice Issue Date: 2023-08-16"
+                  issue_date: "2023-08-19"
+                  issue_time: "10:09:00"
+                  supplier_info:
+                    vat_number: "311262046600003"
+                  customer_info:
+                    vat_number: "2323233325"
+                  legal_monitory_total:
+                    total_amount: 60
+                    payable_amount: 69
+                  invoice_lines:
+                    - id: "1"
+                      quantity: 20
+                      amount: 60
       responses:
         "200":
-          description: Debit note processed
+          description: Debit note processed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectResponse"
 
-  /v1/e-invoicing/{onboard_id}/notify-config:
-    post:
+    get:
+      tags: [Debit Notes]
+      summary: List debit notes
       security:
         - BearerAuth: []
       parameters:
-        - name: onboard_id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OnboardId"
+      responses:
+        "200":
+          description: Debit note list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListResponse"
+
+  /v1/e-invoicing/{onboard_id}/notify-config:
+    post:
+      tags: [Notification]
+      summary: Configure outbound notification
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/NotifyConfig"
+            example:
+              active: true
+              whatsapp_config:
+                access_token: "684599e2b19c3"
+                instance_id: "6958DC6D80D0F"
+                message_template: "Dear Customer, Your Invoice has been successfully processed."
       responses:
         "200":
-          description: Notification updated
+          description: Notification configuration updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMessage"
+
+  /v1/e-invoicing/{onboard_id}/docs-xls:
+    post:
+      tags: [Export]
+      summary: Generate Excel document export
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+        - $ref: "#/components/parameters/CustomerVat"
+      responses:
+        "200":
+          description: Export generation accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+
+  /v1/e-invoicing/{onboard_id}/docs-xls/{file_id}:
+    get:
+      tags: [Export]
+      summary: Download generated Excel file
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/FileId"
+      responses:
+        "200":
+          description: Binary XLS stream.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /v1/e-invoicing/{onboard_id}/tasks/{task_id}:
+    get:
+      tags: [Tasks]
+      summary: Get task status
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OnboardId"
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
